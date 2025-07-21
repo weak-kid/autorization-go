@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 
@@ -32,6 +31,16 @@ type customClaims struct {
 	jwt.StandardClaims
 }
 
+// @Summary Аутентификация пользователя
+// @Description Генерирует access и refresh токены
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param input body authRequest true "Данные пользователя"
+// @Success 200 {object} map[string]string "Токены"
+// @Failure 400 {object} map[string]string "Ошибка"
+// @Failure 500 {object} map[string]string "Ошибка"
+// @Router /api/auth [post]
 func (app *application) AuthorizeUser(c *gin.Context) {
 	userAgent := c.Request.UserAgent()
 	ipAddr := c.ClientIP()
@@ -50,6 +59,14 @@ func (app *application) AuthorizeUser(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"access": accessTokenString, "refresh": refreshToken})
 }
 
+// @Summary Получение текущего пользователя
+// @Description Возвращает GUID текущего аутентифицированного пользователя
+// @Tags user
+// @Produce json
+// @Security ApiKeyAuth
+// @Success 200 {object} map[string]string "GUID пользователя"
+// @Failure 401 {object} map[string]string "Ошибка"
+// @Router /api/currentUser [get]
 func (app *application) GetCurrentUser(c *gin.Context) {
 	accessHeader := c.GetHeader("Access")
 
@@ -80,6 +97,13 @@ func (app *application) GetCurrentUser(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"GUID": refreshTokenRow.UserGUID})
 }
 
+// @Summary Деавторизация
+// @Description Отзывает все токены пользователя
+// @Tags auth
+// @Security ApiKeyAuth
+// @Success 204
+// @Failure 401 {object} map[string]string "Ошибка"
+// @Router /api/deauthorize [post]
 func (app *application) DeauthorizeUser(c *gin.Context) {
 	accessHeader := c.GetHeader("Access")
 
@@ -112,6 +136,18 @@ func (app *application) DeauthorizeUser(c *gin.Context) {
 	c.JSON(http.StatusNoContent, nil)
 }
 
+// @Summary Обновление токенов
+// @Description Обновляет пару access и refresh токенов
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param input body refreshRequest true "Refresh токен"
+// @Success 200 {object} map[string]string "Новые токены"
+// @Failure 400 {object} map[string]string "Ошибка"
+// @Failure 401 {object} map[string]string "Ошибка"
+// @Failure 403 {object} map[string]string "Ошибка"
+// @Router /api/refresh [post]
 func (app *application) Refresh(c *gin.Context) {
 	accessHeader := c.GetHeader("Access")
 	ipAddr := c.ClientIP()
@@ -138,7 +174,7 @@ func (app *application) Refresh(c *gin.Context) {
 		return
 	}
 
-	if !validateRefreshToken(Refresh.RefreshToken, userGUID) {
+	if !validateRefreshToken(Refresh.RefreshToken, userGUID, app.refreshSecret) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized access"})
 		return
 	}
@@ -174,19 +210,19 @@ func (app *application) Refresh(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"access": accessTokenString, "refresh": refreshToken})
 }
 
-func validateRefreshToken(token string, userGUID string) bool {
+func validateRefreshToken(token, userGUID, refreshSecret string) bool {
 	parts := strings.Split(token, ".")
 	if len(parts) != 2 {
 		return false
 	}
 
-	randomPart, _ := base64.RawURLEncoding.DecodeString(parts[1])
-	h := hmac.New(sha512.New, []byte(os.Getenv("REFRESH_SECRET")))
+	randomPart, _ := base64.RawURLEncoding.DecodeString(parts[0])
+	h := hmac.New(sha512.New, []byte(refreshSecret))
 	h.Write([]byte(userGUID))
 	h.Write(randomPart)
 	expectedSig := base64.RawURLEncoding.EncodeToString(h.Sum(nil)[:16])
 
-	return hmac.Equal([]byte(parts[2]), []byte(expectedSig))
+	return hmac.Equal([]byte(parts[1]), []byte(expectedSig))
 }
 
 func (app *application) sendWebHook(c *gin.Context, oldIpAddr, newIpAddr, userGUID string) {

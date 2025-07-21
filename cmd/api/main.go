@@ -23,6 +23,16 @@ type application struct {
 	repo          database.RefreshModel
 }
 
+// @title Authentication Service API
+// @version 1.0
+// @description REST API для сервиса аутентификации
+
+// @securityDefinitions.apikey ApiKeyAuth
+// @in header
+// @name Access
+
+// @host localhost:8080
+// @BasePath /
 func main() {
 	db, err := sql.Open("postgres", os.Getenv("DB_URL"))
 	if err != nil {

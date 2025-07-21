@@ -1,0 +1,149 @@
+basePath: /
+definitions:
+  main.authRequest:
+    properties:
+      GUID:
+        type: string
+    required:
+    - GUID
+    type: object
+  main.refreshRequest:
+    properties:
+      refresh_token:
+        type: string
+    required:
+    - refresh_token
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: REST API для сервиса аутентификации
+  title: Authentication Service API
+  version: "1.0"
+paths:
+  /api/auth:
+    post:
+      consumes:
+      - application/json
+      description: Генерирует access и refresh токены
+      parameters:
+      - description: Данные пользователя
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/main.authRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Токены
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Ошибка
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Аутентификация пользователя
+      tags:
+      - auth
+  /api/currentUser:
+    get:
+      description: Возвращает GUID текущего аутентифицированного пользователя
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: GUID пользователя
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Ошибка
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Получение текущего пользователя
+      tags:
+      - user
+  /api/deauthorize:
+    post:
+      description: Отзывает все токены пользователя
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Ошибка
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Деавторизация
+      tags:
+      - auth
+  /api/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Обновляет пару access и refresh токенов
+      parameters:
+      - description: Refresh токен
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/main.refreshRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Новые токены
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Ошибка
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Ошибка
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Ошибка
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Обновление токенов
+      tags:
+      - auth
+securityDefinitions:
+  ApiKeyAuth:
+    in: header
+    name: Access
+    type: apiKey
+swagger: "2.0"
