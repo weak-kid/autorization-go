@@ -19,6 +19,7 @@ type application struct {
 	port          int
 	jwtSecret     string
 	refreshSecret string
+	webHookUrl    string
 	repo          database.RefreshModel
 }
 

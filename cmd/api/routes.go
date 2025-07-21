@@ -12,7 +12,7 @@ func (app *application) routes() http.Handler {
 	api := g.Group("/api")
 	{
 		api.POST("auth", app.AuthorizeUser)
-		// api.POST("refresh", app.RefreshTokens)
+		api.POST("refresh", app.Refresh)
 		api.GET("currentUser", app.GetCurrentUser)
 		api.POST("deauthorize", app.DeauthorizeUser)
 	}
