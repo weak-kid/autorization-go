@@ -12,7 +12,7 @@ import (
 	"github.com/golang-migrate/migrate/v4/source/file"
 	_ "github.com/lib/pq"
 
-	_ "github.com/lib/pq"
+	_ "authorization-task/cmd/api/docs"
 )
 
 type application struct {
@@ -60,9 +60,18 @@ func main() {
 	repo.DB = db
 	app := &application{
 		port:          env.GetEnvInt("PORT", 8080),
-		jwtSecret:     env.GetEnvString("JWT_SECRET", "some_secret"),
-		refreshSecret: env.GetEnvString("REFRESH_SECRET", "another_secret"),
+		jwtSecret:     env.GetEnvString("JWT_SECRET", ""),
+		refreshSecret: env.GetEnvString("REFRESH_SECRET", ""),
+		webHookUrl:    env.GetEnvString("WEBHOOK_URL", "http://default-webhook"),
 		repo:          repo,
+	}
+
+	if app.jwtSecret == "" {
+		log.Fatal("JWT_SECRET must be set")
+	}
+
+	if app.refreshSecret == "" {
+		log.Fatal("REFRESH_SECRET must be set")
 	}
 
 	if err := app.Serve(); err != nil {

@@ -18,7 +18,7 @@ import (
 )
 
 type authRequest struct {
-	UserGUID string `json:"GUID" binding:"required,uuid"`
+	UserGUID string `json:"GUID" binding:"required,uuid" example:"026b1196-05fa-49ec-acad-bb09ad170148"`
 }
 
 type refreshRequest struct {
@@ -38,8 +38,11 @@ type customClaims struct {
 // @Produce json
 // @Param input body authRequest true "Данные пользователя"
 // @Success 200 {object} map[string]string "Токены"
+// @Example {access: "jwt.token", refresh: "base64token"}
 // @Failure 400 {object} map[string]string "Ошибка"
+// @Example {error: "error message"}
 // @Failure 500 {object} map[string]string "Ошибка"
+// @Example {error: "error message"}
 // @Router /api/auth [post]
 func (app *application) AuthorizeUser(c *gin.Context) {
 	userAgent := c.Request.UserAgent()
@@ -65,7 +68,9 @@ func (app *application) AuthorizeUser(c *gin.Context) {
 // @Produce json
 // @Security ApiKeyAuth
 // @Success 200 {object} map[string]string "GUID пользователя"
+// @Example {GUID: "guid"}
 // @Failure 401 {object} map[string]string "Ошибка"
+// @Example {error: "Unauthorized access"}
 // @Router /api/currentUser [get]
 func (app *application) GetCurrentUser(c *gin.Context) {
 	accessHeader := c.GetHeader("Access")
@@ -103,6 +108,7 @@ func (app *application) GetCurrentUser(c *gin.Context) {
 // @Security ApiKeyAuth
 // @Success 204
 // @Failure 401 {object} map[string]string "Ошибка"
+// @Example {error: "Unauthorized access"}
 // @Router /api/deauthorize [post]
 func (app *application) DeauthorizeUser(c *gin.Context) {
 	accessHeader := c.GetHeader("Access")
@@ -145,8 +151,11 @@ func (app *application) DeauthorizeUser(c *gin.Context) {
 // @Param input body refreshRequest true "Refresh токен"
 // @Success 200 {object} map[string]string "Новые токены"
 // @Failure 400 {object} map[string]string "Ошибка"
+// @Example {error: "error message"}
 // @Failure 401 {object} map[string]string "Ошибка"
+// @Example {error: "Unauthorized access"}
 // @Failure 403 {object} map[string]string "Ошибка"
+// @Example {error: "User agent changed"}
 // @Router /api/refresh [post]
 func (app *application) Refresh(c *gin.Context) {
 	accessHeader := c.GetHeader("Access")
