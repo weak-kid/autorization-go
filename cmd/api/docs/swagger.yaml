@@ -1,8 +1,9 @@
 basePath: /
 definitions:
-  main.authRequest:
+  main.authRequestOrResponse:
     properties:
       GUID:
+        example: 026b1196-05fa-49ec-acad-bb09ad170148
         type: string
     required:
     - GUID
@@ -10,9 +11,19 @@ definitions:
   main.refreshRequest:
     properties:
       refresh_token:
+        example: valid refresh token
         type: string
     required:
     - refresh_token
+    type: object
+  main.tokensResponse:
+    properties:
+      access:
+        example: new access token
+        type: string
+      refresh:
+        example: new refresh token
+        type: string
     type: object
 host: localhost:8080
 info:
@@ -32,28 +43,22 @@ paths:
         name: input
         required: true
         schema:
-          $ref: '#/definitions/main.authRequest'
+          $ref: '#/definitions/main.authRequestOrResponse'
+      - description: User-Agent, проверяется в Refresh
+        in: header
+        name: User-Agent
+        type: string
       produces:
       - application/json
       responses:
         "200":
           description: Токены
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/main.tokensResponse'
         "400":
-          description: Ошибка
-          schema:
-            additionalProperties:
-              type: string
-            type: object
+          description: Bad request(GUID required)
         "500":
-          description: Ошибка
-          schema:
-            additionalProperties:
-              type: string
-            type: object
+          description: Something went wrong
       summary: Аутентификация пользователя
       tags:
       - auth
@@ -66,15 +71,9 @@ paths:
         "200":
           description: GUID пользователя
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/main.authRequestOrResponse'
         "401":
-          description: Ошибка
-          schema:
-            additionalProperties:
-              type: string
-            type: object
+          description: Unauthorized access
       security:
       - ApiKeyAuth: []
       summary: Получение текущего пользователя
@@ -87,11 +86,7 @@ paths:
         "204":
           description: No Content
         "401":
-          description: Ошибка
-          schema:
-            additionalProperties:
-              type: string
-            type: object
+          description: Unauthorized access
       security:
       - ApiKeyAuth: []
       summary: Деавторизация
@@ -115,27 +110,13 @@ paths:
         "200":
           description: Новые токены
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/main.tokensResponse'
         "400":
-          description: Ошибка
-          schema:
-            additionalProperties:
-              type: string
-            type: object
+          description: Bad request(refresh token required)
         "401":
-          description: Ошибка
-          schema:
-            additionalProperties:
-              type: string
-            type: object
+          description: Unauthorized access
         "403":
-          description: Ошибка
-          schema:
-            additionalProperties:
-              type: string
-            type: object
+          description: User agent changed
       security:
       - ApiKeyAuth: []
       summary: Обновление токенов

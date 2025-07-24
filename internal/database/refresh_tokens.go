@@ -42,7 +42,7 @@ func (repo *RefreshModel) DeleteUsersTokens(GUID string) error {
 	return err
 }
 
-func (repo *RefreshModel) DeleteRefreshToken(refreshToken, GUID string) error {
-	_, err := repo.DB.Exec(`DELETE FROM refresh_tokens WHERE user_guid = $1 AND token_hash = $2`, GUID, refreshToken)
+func (repo *RefreshModel) DeleteRefreshToken(id int) error {
+	_, err := repo.DB.Exec(`DELETE FROM refresh_tokens WHERE id = $1`, id)
 	return err
 }

@@ -23,6 +23,24 @@ type application struct {
 	repo          database.RefreshModel
 }
 
+func runMigrations(db *sql.DB) {
+	instance, err := postgres.WithInstance(db, &postgres.Config{})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fSrc, err := (&file.File{}).Open("./migrations")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	m, err := migrate.NewWithInstance("file", fSrc, "postgres", instance)
+
+	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
+		log.Fatal(err)
+	}
+}
+
 // @title Authentication Service API
 // @version 1.0
 // @description REST API для сервиса аутентификации
@@ -40,21 +58,7 @@ func main() {
 	}
 	defer db.Close()
 
-	instance, err := postgres.WithInstance(db, &postgres.Config{})
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fSrc, err := (&file.File{}).Open("./migrations")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	m, err := migrate.NewWithInstance("file", fSrc, "postgres", instance)
-
-	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
-		log.Fatal(err)
-	}
+	runMigrations(db)
 
 	var repo database.RefreshModel
 	repo.DB = db
@@ -62,7 +66,7 @@ func main() {
 		port:          env.GetEnvInt("PORT", 8080),
 		jwtSecret:     env.GetEnvString("JWT_SECRET", ""),
 		refreshSecret: env.GetEnvString("REFRESH_SECRET", ""),
-		webHookUrl:    env.GetEnvString("WEBHOOK_URL", "http://default-webhook"),
+		webHookUrl:    env.GetEnvString("WEBHOOK_URL", "http://localhost:8080/webhook"),
 		repo:          repo,
 	}
 

@@ -35,37 +35,28 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/main.authRequest"
+                            "$ref": "#/definitions/main.authRequestOrResponse"
                         }
+                    },
+                    {
+                        "type": "string",
+                        "description": "User-Agent, проверяется в Refresh",
+                        "name": "User-Agent",
+                        "in": "header"
                     }
                 ],
                 "responses": {
                     "200": {
                         "description": "Токены",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/main.tokensResponse"
                         }
                     },
                     "400": {
-                        "description": "Ошибка",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
+                        "description": "Bad request(GUID required)"
                     },
                     "500": {
-                        "description": "Ошибка",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
+                        "description": "Something went wrong"
                     }
                 }
             }
@@ -89,20 +80,11 @@ const docTemplate = `{
                     "200": {
                         "description": "GUID пользователя",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/main.authRequestOrResponse"
                         }
                     },
                     "401": {
-                        "description": "Ошибка",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
+                        "description": "Unauthorized access"
                     }
                 }
             }
@@ -124,13 +106,7 @@ const docTemplate = `{
                         "description": "No Content"
                     },
                     "401": {
-                        "description": "Ошибка",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
+                        "description": "Unauthorized access"
                     }
                 }
             }
@@ -168,52 +144,32 @@ const docTemplate = `{
                     "200": {
                         "description": "Новые токены",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/main.tokensResponse"
                         }
                     },
                     "400": {
-                        "description": "Ошибка",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
+                        "description": "Bad request(refresh token required)"
                     },
                     "401": {
-                        "description": "Ошибка",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
+                        "description": "Unauthorized access"
                     },
                     "403": {
-                        "description": "Ошибка",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
+                        "description": "User agent changed"
                     }
                 }
             }
         }
     },
     "definitions": {
-        "main.authRequest": {
+        "main.authRequestOrResponse": {
             "type": "object",
             "required": [
                 "GUID"
             ],
             "properties": {
                 "GUID": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "026b1196-05fa-49ec-acad-bb09ad170148"
                 }
             }
         },
@@ -224,7 +180,21 @@ const docTemplate = `{
             ],
             "properties": {
                 "refresh_token": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "valid refresh token"
+                }
+            }
+        },
+        "main.tokensResponse": {
+            "type": "object",
+            "properties": {
+                "access": {
+                    "type": "string",
+                    "example": "new access token"
+                },
+                "refresh": {
+                    "type": "string",
+                    "example": "new refresh token"
                 }
             }
         }

@@ -17,12 +17,17 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type authRequest struct {
+type authRequestOrResponse struct {
 	UserGUID string `json:"GUID" binding:"required,uuid" example:"026b1196-05fa-49ec-acad-bb09ad170148"`
 }
 
 type refreshRequest struct {
-	RefreshToken string `json:"refresh_token" binding:"required"`
+	RefreshToken string `json:"refresh_token" binding:"required" example:"valid refresh token"`
+}
+
+type tokensResponse struct {
+	RefreshToken string `json:"refresh" example:"new refresh token"`
+	AccessToken  string `json:"access" example:"new access token"`
 }
 
 type customClaims struct {
@@ -36,30 +41,33 @@ type customClaims struct {
 // @Tags auth
 // @Accept json
 // @Produce json
-// @Param input body authRequest true "Данные пользователя"
-// @Success 200 {object} map[string]string "Токены"
+// @Param input body authRequestOrResponse true "Данные пользователя"
+// @Success 200 {object} tokensResponse "Токены"
 // @Example {access: "jwt.token", refresh: "base64token"}
-// @Failure 400 {object} map[string]string "Ошибка"
-// @Example {error: "error message"}
-// @Failure 500 {object} map[string]string "Ошибка"
-// @Example {error: "error message"}
+// @Failure 400 "Bad request(GUID required)"
+// @Failure 500 "Something went wrong"
 // @Router /api/auth [post]
 func (app *application) AuthorizeUser(c *gin.Context) {
 	userAgent := c.Request.UserAgent()
 	ipAddr := c.ClientIP()
-	var Auth authRequest
+	var Auth authRequestOrResponse
 	if err := c.ShouldBindJSON(&Auth); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "GUID required"})
 		return
 	}
 
-	refreshToken, accessTokenString, err := app.generateNewTokens(c, Auth.UserGUID, userAgent, ipAddr)
+	var Response tokensResponse
+
+	refreshToken, accessToken, err := app.generateNewTokens(c, Auth.UserGUID, userAgent, ipAddr)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"Error": "Something went wrong"})
+		c.JSON(http.StatusInternalServerError, gin.H{"Error": "Something went wrond"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"access": accessTokenString, "refresh": refreshToken})
+	Response.RefreshToken = refreshToken
+	Response.AccessToken = accessToken
+
+	c.JSON(http.StatusOK, Response)
 }
 
 // @Summary Получение текущего пользователя
@@ -67,17 +75,15 @@ func (app *application) AuthorizeUser(c *gin.Context) {
 // @Tags user
 // @Produce json
 // @Security ApiKeyAuth
-// @Success 200 {object} map[string]string "GUID пользователя"
-// @Example {GUID: "guid"}
-// @Failure 401 {object} map[string]string "Ошибка"
-// @Example {error: "Unauthorized access"}
+// @Success 200 {object} authRequestOrResponse "GUID пользователя"
+// @Failure 401 "Unauthorized access"
 // @Router /api/currentUser [get]
 func (app *application) GetCurrentUser(c *gin.Context) {
 	accessHeader := c.GetHeader("Access")
 
 	claims, err := ParseJwtToken(accessHeader, app.jwtSecret)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized access"})
 		return
 	}
 
@@ -90,16 +96,7 @@ func (app *application) GetCurrentUser(c *gin.Context) {
 		return
 	}
 
-	// ONLY FOR REFRESH
-	// if userAgent != refreshTokenRow.UserAgent {
-	// 	app.deauthorizeFromAll(userGUID)
-	// }
-
-	// if ipAddr != refreshTokenRow.IpAddr {
-	// 	app.sendWebHook(refreshTokenRow.IpAddr, ipAddr, userGUID)
-	// }
-
-	c.JSON(http.StatusOK, gin.H{"GUID": refreshTokenRow.UserGUID})
+	c.JSON(http.StatusOK, authRequestOrResponse{UserGUID: refreshTokenRow.UserGUID})
 }
 
 // @Summary Деавторизация
@@ -107,15 +104,14 @@ func (app *application) GetCurrentUser(c *gin.Context) {
 // @Tags auth
 // @Security ApiKeyAuth
 // @Success 204
-// @Failure 401 {object} map[string]string "Ошибка"
-// @Example {error: "Unauthorized access"}
+// @Failure 401 "Unauthorized access"
 // @Router /api/deauthorize [post]
 func (app *application) DeauthorizeUser(c *gin.Context) {
 	accessHeader := c.GetHeader("Access")
 
 	claims, err := ParseJwtToken(accessHeader, app.jwtSecret)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -130,15 +126,6 @@ func (app *application) DeauthorizeUser(c *gin.Context) {
 
 	app.repo.DeleteUsersTokens(userGUID)
 
-	// ONLY FOR REFRESH
-	// if userAgent != refreshTokenRow.UserAgent {
-	// 	app.deauthorizeFromAll(userGUID)
-	// }
-
-	// if ipAddr != refreshTokenRow.IpAddr {
-	// 	app.sendWebHook(refreshTokenRow.IpAddr, ipAddr, userGUID)
-	// }
-
 	c.JSON(http.StatusNoContent, nil)
 }
 
@@ -149,19 +136,17 @@ func (app *application) DeauthorizeUser(c *gin.Context) {
 // @Produce json
 // @Security ApiKeyAuth
 // @Param input body refreshRequest true "Refresh токен"
-// @Success 200 {object} map[string]string "Новые токены"
-// @Failure 400 {object} map[string]string "Ошибка"
-// @Example {error: "error message"}
-// @Failure 401 {object} map[string]string "Ошибка"
-// @Example {error: "Unauthorized access"}
-// @Failure 403 {object} map[string]string "Ошибка"
-// @Example {error: "User agent changed"}
+// @Success 200 {object} tokensResponse "Новые токены"
+// @Failure 400 "Bad request(refresh token required)"
+// @Failure 401 "Unauthorized access"
+// @Failure 403 "Forbidden(User-Agent changed, or invalid refresh token)"
 // @Router /api/refresh [post]
 func (app *application) Refresh(c *gin.Context) {
 	accessHeader := c.GetHeader("Access")
 	ipAddr := c.ClientIP()
 	userAgent := c.GetHeader("User-Agent")
 	var Refresh refreshRequest
+	var Response tokensResponse
 
 	if err := c.ShouldBindJSON(&Refresh); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -170,7 +155,7 @@ func (app *application) Refresh(c *gin.Context) {
 
 	claims, err := ParseJwtToken(accessHeader, app.jwtSecret)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -184,12 +169,12 @@ func (app *application) Refresh(c *gin.Context) {
 	}
 
 	if !validateRefreshToken(Refresh.RefreshToken, userGUID, app.refreshSecret) {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized access"})
+		c.JSON(http.StatusForbidden, gin.H{"error": "Invalid refresh token"})
 		return
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(refreshTokenRow.TokenHash), []byte(Refresh.RefreshToken)); err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized access"})
+		c.JSON(http.StatusForbidden, gin.H{"error": "Invalid refresh token"})
 		return
 	}
 
@@ -203,20 +188,18 @@ func (app *application) Refresh(c *gin.Context) {
 		go app.sendWebHook(c, refreshTokenRow.IpAddr, ipAddr, userGUID)
 	}
 
-	refreshTokenHash, err := bcrypt.GenerateFromPassword([]byte(Refresh.RefreshToken), bcrypt.DefaultCost)
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized access"})
-		return
-	}
-	app.repo.DeleteRefreshToken(string(refreshTokenHash), userGUID)
-
-	refreshToken, accessTokenString, err := app.generateNewTokens(c, userGUID, userAgent, ipAddr)
+	refreshToken, accessToken, err := app.generateNewTokens(c, userGUID, userAgent, ipAddr)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"Error": "Something went wrong"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"access": accessTokenString, "refresh": refreshToken})
+	app.repo.DeleteRefreshToken(refreshId)
+
+	Response.RefreshToken = refreshToken
+	Response.AccessToken = accessToken
+
+	c.JSON(http.StatusOK, Response)
 }
 
 func validateRefreshToken(token, userGUID, refreshSecret string) bool {
