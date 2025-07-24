@@ -8,6 +8,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -235,13 +236,13 @@ func (app *application) sendWebHook(c *gin.Context, oldIpAddr, newIpAddr, userGU
 	)
 
 	if err != nil {
-		// добавить логгирование
+		log.Println(err.Error())
 		return
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= 400 {
-		// добавить логгирование
+		log.Printf("Status: %d\n", resp.StatusCode)
 	}
 }
 
