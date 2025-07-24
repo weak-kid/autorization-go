@@ -37,12 +37,6 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/main.authRequestOrResponse"
                         }
-                    },
-                    {
-                        "type": "string",
-                        "description": "User-Agent, проверяется в Refresh",
-                        "name": "User-Agent",
-                        "in": "header"
                     }
                 ],
                 "responses": {
@@ -154,7 +148,7 @@ const docTemplate = `{
                         "description": "Unauthorized access"
                     },
                     "403": {
-                        "description": "User agent changed"
+                        "description": "Forbidden(User-Agent changed, or invalid refresh token)"
                     }
                 }
             }

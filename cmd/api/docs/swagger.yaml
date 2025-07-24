@@ -44,10 +44,6 @@ paths:
         required: true
         schema:
           $ref: '#/definitions/main.authRequestOrResponse'
-      - description: User-Agent, проверяется в Refresh
-        in: header
-        name: User-Agent
-        type: string
       produces:
       - application/json
       responses:
@@ -116,7 +112,7 @@ paths:
         "401":
           description: Unauthorized access
         "403":
-          description: User agent changed
+          description: Forbidden(User-Agent changed, or invalid refresh token)
       security:
       - ApiKeyAuth: []
       summary: Обновление токенов
