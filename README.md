@@ -14,8 +14,8 @@
 ## Запуск сервиса(вместе с бд)
 
 ### Требования
-- Docker 20.10+
-- Docker Compose 1.29+
+- Docker
+- Docker Compose v2
 
 ### Инструкция
 
